@@ -9,14 +9,14 @@ export class InfrastructureStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const siteBucket = new s3.Bucket(this, 'FrontendBucket', {
+    const siteBucket = new s3.Bucket(this, 'CRUDAppBucket', {
       websiteIndexDocument: 'index.html',
       websiteErrorDocument: 'error.html',
       publicReadAccess: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
     });
 
-    const distribution = new cloudfront.Distribution(this, 'FrontendDistribution', {
+    const distribution = new cloudfront.Distribution(this, 'CRUDAppDistribution', {
       defaultBehavior: {
         origin: new origins.S3StaticWebsiteOrigin(siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -31,7 +31,7 @@ export class InfrastructureStack extends cdk.Stack {
       ],
     });
 
-    new s3deploy.BucketDeployment(this, 'DeployFrontend', {
+    new s3deploy.BucketDeployment(this, 'DeployCRUDApp', {
       destinationBucket: siteBucket,
       sources: [s3deploy.Source.asset('../frontend/dist')],
       distribution,

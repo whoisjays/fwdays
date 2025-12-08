@@ -9,6 +9,11 @@ infrastructure/node_modules
 infrastructure/yarn-error.log
 infrastructure/cdk.out
 infrastructure/.cdk.staging
+backend/lambdas/node_modules
+backend/cdk/node_modules
+backend/cdk/yarn-error.log
+backend/cdk/cdk.out
+backend/cdk/.cdk.staging
 
 # OS / editor
 .idea
