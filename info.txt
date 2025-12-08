@@ -1,3 +1,2 @@
-Задеплоєний фронт за допомогою AWS CDK
+Задеплоєний фронт за допомогою AWS CDK + API
 https://d13g35ohjws9b1.cloudfront.net/
-
