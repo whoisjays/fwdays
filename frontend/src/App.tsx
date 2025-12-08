@@ -1,124 +1,317 @@
-import { Routes, Route, NavLink } from 'react-router-dom'
-import jackImage from './assets/jack.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import "./App.css";
 
-function HomePage() {
-  return (
-    <section>
-      <p className="tagline">Lorem ipsum dolor sit amet</p>
-      <h1>This React app is deployed to AWS S3 and CloudFront using AWS CDK</h1>
-      <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed facilisis, risus in
-        elementum convallis, lorem arcu tempor neque, vitae dictum nibh lorem non risus.
-      </p>
-      <p>
-        Curabitur dignissim, augue vitae commodo dapibus, arcu nisl euismod erat, eget
-        laoreet leo orci a mauris. Nulla facilisi. Morbi tempor, sem ac tincidunt cursus,
-        odio ipsum hendrerit lorem, sit amet imperdiet justo justo non magna.
-      </p>
-      <img src={jackImage} alt="Lorem ipsum" className="main-image" />
-    </section>
-  )
+type Movie = {
+  id: string;
+  title: string;
+  year: number;
+  createdAt: string;
+};
+
+type MoviePayload = {
+  title: string;
+  year: number;
+};
+
+const API_URL =
+  "https://rcixoyx3rb.execute-api.eu-north-1.amazonaws.com/prod/movies";
+
+const initialMovies: Movie[] = [];
+
+async function fetchMoviesRequest(): Promise<Movie[]> {
+  const response = await fetch(API_URL, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch movies");
+  }
+
+  const data = (await response.json()) as Movie[];
+  return data;
 }
 
-function AboutPage() {
-  return (
-    <section>
-      <h1>Lorem ipsum dolor sit amet</h1>
-      <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In aliquam, est sed varius
-        feugiat, sapien eros egestas justo, vitae molestie justo risus sit amet mi.
-      </p>
-      <p>
-        Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia
-        curae; Sed id arcu non magna elementum faucibus. Maecenas iaculis, mi in aliquet
-        malesuada, lacus velit malesuada metus, id malesuada orci justo ac nibh.
-      </p>
-      <p>
-        Integer vulputate, dui sed lacinia ullamcorper, neque neque vulputate odio, sed
-        tincidunt urna sem sed arcu. Suspendisse dictum lorem ut felis varius, in gravida
-        purus maximus.
-      </p>
-    </section>
-  )
+async function createMovieRequest(payload: MoviePayload): Promise<Movie> {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create movie");
+  }
+
+  const data = (await response.json()) as Movie;
+  return data;
 }
 
-function ContactsPage() {
-  return (
-    <section>
-      <h1>Lorem ipsum dolor sit amet</h1>
-      <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus id nisl sed risus
-        ultrices iaculis. Cras id velit vel lorem volutpat mattis non vitae arcu.
-      </p>
-      <ul className="contacts-list">
-        <li>
-          <span className="label">Email:</span> example@mail.com
-        </li>
-        <li>
-          <span className="label">Телефон:</span> +380 00 000 00 00
-        </li>
-        <li>
-          <span className="label">Місто:</span> Lorem City
-        </li>
-      </ul>
-      <p className="small-note">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam convallis, dui ut
-        mattis vehicula, nunc lacus aliquam nisi, non facilisis nunc magna eget lectus.
-      </p>
-    </section>
-  )
+async function updateMovieRequest(
+  id: string,
+  createdAt: string,
+  payload: MoviePayload,
+): Promise<Movie> {
+  const url =
+    `${API_URL}?id=${encodeURIComponent(id)}` +
+    `&createdAt=${encodeURIComponent(createdAt)}`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update movie");
+  }
+
+  const data = (await response.json()) as Movie;
+  return data;
+}
+
+async function deleteMovieRequest(id: string, createdAt: string): Promise<void> {
+  const url =
+    `${API_URL}?id=${encodeURIComponent(id)}` +
+    `&createdAt=${encodeURIComponent(createdAt)}`;
+
+  const response = await fetch(url, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete movie");
+  }
 }
 
 function App() {
+  const [movies, setMovies] = useState<Movie[]>(initialMovies);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [year, setYear] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const isEditMode = selectedId !== null;
+
+  console.log(movies);
+
+  const selectedMovie = movies.find((m) => m.id === selectedId) ?? null;
+
+  function resetForm() {
+    setSelectedId(null);
+    setTitle("");
+    setYear("");
+  }
+
+  async function handleRefresh() {
+    try {
+      setIsLoading(true);
+      const data = await fetchMoviesRequest();
+      console.log("Fetched movies from API", data);
+      setMovies(data);
+      setSelectedId(null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void (async () => {
+      await handleRefresh();
+    })();
+  }, []);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedTitle = title.trim();
+    const parsedYear = Number(year);
+
+    if (!trimmedTitle || Number.isNaN(parsedYear) || parsedYear < 1878) {
+      return;
+    }
+
+    const payload: MoviePayload = {
+      title: trimmedTitle,
+      year: parsedYear,
+    };
+
+    if (isEditMode && selectedMovie) {
+      try {
+        const updated = await updateMovieRequest(
+          selectedMovie.id,
+          selectedMovie.createdAt,
+          payload,
+        );
+        setMovies((current) =>
+          current.map((m) => (m.id === updated.id ? updated : m))
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    } else {
+      try {
+        const created = await createMovieRequest(payload);
+        setMovies((current) => [...current, created]);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    resetForm();
+  }
+
+  async function handleEdit(movie: Movie) {
+    setSelectedId(movie.id);
+    setTitle(movie.title);
+    setYear(String(movie.year));
+  }
+
+  async function handleDelete(id: string) {
+    const movie = movies.find((m) => m.id === id);
+    if (!movie) {
+      return;
+    }
+
+    setMovies((current) => current.filter((m) => m.id !== id));
+    await deleteMovieRequest(movie.id, movie.createdAt);
+    if (selectedId === id) {
+      resetForm();
+    }
+  }
+
   return (
     <div className="app">
       <header className="header">
         <div className="header-inner">
-          <div className="logo-text">Simple React Site</div>
-          <nav className="nav">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }: { isActive: boolean }) =>
-                isActive ? 'nav-btn active' : 'nav-btn'
-              }
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/about"
-              className={({ isActive }: { isActive: boolean }) =>
-                isActive ? 'nav-btn active' : 'nav-btn'
-              }
-            >
-              About
-            </NavLink>
-            <NavLink
-              to="/contacts"
-              className={({ isActive }: { isActive: boolean }) =>
-                isActive ? 'nav-btn active' : 'nav-btn'
-              }
-            >
-              Contacts
-            </NavLink>
-          </nav>
+          <div className="logo-text">Movies CRUD</div>
+          <button
+            type="button"
+            className="nav-btn"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Refresh from API"}
+          </button>
         </div>
       </header>
 
       <main className="content">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
-        </Routes>
+        <section className="movies-layout">
+          <div className="movies-header">
+            <p className="tagline">Movie list with CRUD</p>
+            <h1>Movie list with CRUD</h1>
+            <p>
+              Add a movie title and release year, edit existing ones or delete
+              them.
+            </p>
+          </div>
+
+          <div className="movies-grid">
+            <div className="movies-panel">
+              <h2>Movies</h2>
+              {isLoading ? (
+                <div className="movies-loader">Loading movies...</div>
+              ) : (
+                <ul className="movies-list">
+                  {movies.map((movie) => (
+                    <li key={movie.id} className="movie-item">
+                      <div className="movie-main">
+                        <span className="movie-title">{movie.title}</span>
+                        <div className="movie-meta">
+                          <span className="movie-year">{movie.year}</span>
+                          <span className="movie-created">
+                            Created:{" "}
+                            {new Date(Number(movie.createdAt)).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="movie-actions">
+                        <button
+                          type="button"
+                          className="movie-btn secondary"
+                          onClick={() => handleEdit(movie)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="movie-btn danger"
+                          onClick={() => handleDelete(movie.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                  {movies.length === 0 && (
+                    <li className="movie-empty">
+                      No movies yet. Add the first one.
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            <div className="movies-panel">
+              <h2>{isEditMode ? "Edit movie" : "Add new movie"}</h2>
+              <form className="movie-form" onSubmit={handleSubmit}>
+                <label className="field">
+                  <span className="field-label">Title</span>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Interstellar"
+                  />
+                </label>
+
+                <label className="field">
+                  <span className="field-label">Year</span>
+                  <input
+                    type="number"
+                    value={year}
+                    onChange={(event) => setYear(event.target.value)}
+                    placeholder="2014"
+                    min={1878}
+                    max={2100}
+                  />
+                </label>
+
+                <div className="form-actions">
+                  <button
+                    type="submit"
+                    className="primary-btn"
+                    disabled={!title.trim() || !year.trim()}
+                  >
+                    {isEditMode ? "Save changes" : "Add movie"}
+                  </button>
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      onClick={resetForm}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="footer">
-        <small>Lorem ipsum dolor sit amet, {new Date().getFullYear()}</small>
+        <small>Movies CRUD demo, {new Date().getFullYear()}</small>
       </footer>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
