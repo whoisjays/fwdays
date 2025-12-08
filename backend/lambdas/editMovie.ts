@@ -11,6 +11,13 @@ export const handler = async (event: any) => {
   const createdAt =
     event.queryStringParameters?.createdAt as string | undefined;
 
+  const origin =
+    event.headers?.origin || event.headers?.Origin || event.headers?.ORIGIN;
+  const allowedOrigins = new Set([
+    "https://d13g35ohjws9b1.cloudfront.net",
+    "http://localhost:3002",
+  ]);
+
   if (!id || !createdAt) {
     return {
       statusCode: 400,
@@ -53,7 +60,9 @@ export const handler = async (event: any) => {
     statusCode: 200,
     body: JSON.stringify(updated),
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": allowedOrigins.has(origin)
+        ? origin
+        : "https://d13g35ohjws9b1.cloudfront.net",
     },
   };
 };
