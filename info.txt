@@ -1,7 +1,2 @@
-https://d2vrue4pfd2xyr.cloudfront.net/
-
-також наконфігурив 404
-
-
-Домен не вдалось прикрутити бо
-Free Tier accounts are not supported for this service
+Задеплоєний фронт за допомогою AWS CDK + API
+https://d13g35ohjws9b1.cloudfront.net/
